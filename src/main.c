@@ -22,6 +22,8 @@
 #include <zephyr/bluetooth/services/bas.h>
 #include <zephyr/bluetooth/services/hrs.h>
 
+#include "input.h"
+
 static const struct bt_data ad[] = {
 	BT_DATA_BYTES(BT_DATA_FLAGS, (BT_LE_AD_GENERAL | BT_LE_AD_NO_BREDR)),
 	BT_DATA_BYTES(BT_DATA_UUID16_ALL,
@@ -103,6 +105,19 @@ static void hrs_notify(void)
 	bt_hrs_notify(heartrate);
 }
 
+static void input_notify(void)
+{
+	uint8_t button_pressed = bt_input_get_button();
+
+	if(button_pressed) {
+		button_pressed = 0U;
+	} else {
+		button_pressed = 1U;
+	}
+
+	bt_input_set_button(button_pressed);
+}
+
 int main(void)
 {
 	int err;
@@ -128,6 +143,9 @@ int main(void)
 
 		/* Battery level simulation */
 		bas_notify();
+
+		/* Button simulation */
+		input_notify();
 	}
 	return 0;
 }

@@ -8,6 +8,7 @@ project(peripheral_hr)
 FILE(GLOB app_sources src/*.c)
 target_sources(app PRIVATE
   ${app_sources}
+  src/input.c
   )
 
 zephyr_library_include_directories(${ZEPHYR_BASE}/samples/bluetooth)
