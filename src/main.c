@@ -19,8 +19,6 @@
 #include <zephyr/bluetooth/conn.h>
 #include <zephyr/bluetooth/uuid.h>
 #include <zephyr/bluetooth/gatt.h>
-#include <zephyr/bluetooth/services/bas.h>
-#include <zephyr/bluetooth/services/hrs.h>
 
 #include "input.h"
 #include "output.h"
@@ -29,8 +27,6 @@
 static const struct bt_data ad[] = {
 	BT_DATA_BYTES(BT_DATA_FLAGS, (BT_LE_AD_GENERAL | BT_LE_AD_NO_BREDR)),
 	BT_DATA_BYTES(BT_DATA_UUID16_ALL,
-		      BT_UUID_16_ENCODE(BT_UUID_HRS_VAL),
-		      BT_UUID_16_ENCODE(BT_UUID_BAS_VAL),
 		      BT_UUID_16_ENCODE(BT_UUID_DIS_VAL))
 };
 
@@ -81,32 +77,6 @@ static struct bt_conn_auth_cb auth_cb_display = {
 	.cancel = auth_cancel,
 };
 
-static void bas_notify(void)
-{
-	uint8_t battery_level = bt_bas_get_battery_level();
-
-	battery_level--;
-
-	if (!battery_level) {
-		battery_level = 100U;
-	}
-
-	bt_bas_set_battery_level(battery_level);
-}
-
-static void hrs_notify(void)
-{
-	static uint8_t heartrate = 90U;
-
-	/* Heartrate measurements simulation */
-	heartrate++;
-	if (heartrate == 160U) {
-		heartrate = 90U;
-	}
-
-	bt_hrs_notify(heartrate);
-}
-
 static void input_notify(void)
 {
 	uint8_t button_pressed = bt_input_get_button();
@@ -130,6 +100,20 @@ int main(void)
 		return 0;
 	}
 
+	err = output_init();
+    if (err)
+    {
+        printk("Output service initialization failed (err %d)\n", err);
+        return 0;
+    }
+
+	err = system_init();
+    if (err)
+    {
+        printk("System service initialization failed (err %d)\n", err);
+        return 0;
+    }
+
 	bt_ready();
 
 	bt_conn_auth_cb_register(&auth_cb_display);
@@ -139,12 +123,6 @@ int main(void)
 	 */
 	while (1) {
 		k_sleep(K_SECONDS(1));
-
-		/* Heartrate measurements simulation */
-		hrs_notify();
-
-		/* Battery level simulation */
-		bas_notify();
 
 		/* Update system debug information */
         system_set_debug("No errors");  // Set your debug message as needed
