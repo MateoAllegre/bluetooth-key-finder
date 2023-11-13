@@ -8,6 +8,10 @@
 #include <zephyr/bluetooth/conn.h>
 #include <zephyr/bluetooth/gatt.h>
 #include <zephyr/bluetooth/uuid.h>
+#include <zephyr/drivers/gpio.h>
+#include <zephyr/kernel.h>
+#include <zephyr/sys/printk.h>
+#include <zephyr/device.h>
 
 #include "output.h"
 
@@ -17,6 +21,8 @@ LOG_MODULE_REGISTER(output);
 
 static bool led_state = false;
 static int buzzer_value = 0;
+
+static struct gpio_dt_spec led = GPIO_DT_SPEC_GET_OR(DT_ALIAS(led1), gpios, {0});
 
 static ssize_t write_led(struct bt_conn *conn,
                          const struct bt_gatt_attr *attr,
@@ -30,8 +36,8 @@ static ssize_t write_led(struct bt_conn *conn,
 
     led_state = *((bool *)buf);
 
-    // TODO Code pour contrôler la LED en fonction de led_state
-	printk("%d", led_state);
+    // Controle de la LED en fonction de led_state
+    gpio_pin_set_dt(&led, led_state);
 
     return len;
 }
@@ -66,14 +72,35 @@ BT_GATT_SERVICE_DEFINE(output,
 
 int output_init(void)
 {
-    return 0;
+    int ret;
+
+    if (led.port && !device_is_ready(led.port)) {
+		printk("Error %d: LED device %s is not ready; ignoring it\n",
+		       ret, led.port->name);
+		led.port = NULL;
+	}
+	if (led.port) {
+		ret = gpio_pin_configure_dt(&led, GPIO_OUTPUT);
+		if (ret != 0) {
+			printk("Error %d: failed to configure LED device %s pin %d\n",
+			       ret, led.port->name, led.pin);
+			led.port = NULL;
+		} else {
+			printk("Set up LED at %s pin %d\n", led.port->name, led.pin);
+		}
+	}
+
+    led_state = false;
+    gpio_pin_set_dt(&led, led_state);
+
+    return ret;
 }
 
 void output_set_led(bool state)
 {
     led_state = state;
 
-    // TODO: Code pour contrôler la LED en fonction de led_state
+    gpio_pin_set_dt(&led, led_state);
 }
 
 void output_set_buzzer(int value)
