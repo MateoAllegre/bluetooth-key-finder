@@ -19,6 +19,17 @@ LOG_MODULE_REGISTER(system);
 static const char system_version[] = "1.4.2.3";
 static char system_debug[] = "Generic error message goes here";
 
+static void blvl_ccc_cfg_changed(const struct bt_gatt_attr *attr,
+				       uint16_t value)
+{
+	ARG_UNUSED(attr);
+
+	bool notif_enabled = (value == BT_GATT_CCC_NOTIFY);
+
+	LOG_INF("Debug Notifications %s", notif_enabled ? "enabled" : "disabled");
+}
+
+
 static ssize_t system_read_version(struct bt_conn *conn,
                             const struct bt_gatt_attr *attr, void *buf,
                             uint16_t len, uint16_t offset)
@@ -44,14 +55,16 @@ static ssize_t system_notify_debug(struct bt_conn *conn,
 }
 
 BT_GATT_SERVICE_DEFINE(system,
-                       BT_GATT_PRIMARY_SERVICE(BT_UUID_DECLARE_16(0x1401)),
-                       BT_GATT_CHARACTERISTIC(BT_UUID_DECLARE_16(0x1404),
+                        BT_GATT_PRIMARY_SERVICE(BT_UUID_DECLARE_16(0x1401)),
+                        BT_GATT_CHARACTERISTIC(BT_UUID_DECLARE_16(0x1404),
                                               BT_GATT_CHRC_READ, BT_GATT_PERM_READ,
                                               system_read_version, NULL, NULL),
-                       BT_GATT_CHARACTERISTIC(BT_UUID_DECLARE_16(0x1408),
+                        BT_GATT_CHARACTERISTIC(BT_UUID_DECLARE_16(0x1408),
                                               BT_GATT_CHRC_READ | BT_GATT_CHRC_NOTIFY,
                                               BT_GATT_PERM_READ, system_read_debug,
                                               NULL, system_notify_debug),
+                        BT_GATT_CCC(blvl_ccc_cfg_changed,
+		                                    BT_GATT_PERM_READ | BT_GATT_PERM_WRITE),
 );
 
 int system_init(void)
